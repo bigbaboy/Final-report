@@ -3,25 +3,25 @@ import pickle
 import pandas as pd
 import numpy as np
 
-# Load pipeline
-with open('models/pipeline.pkl', 'rb') as f:
-    pipeline = pickle.load(f)
-
-# Load mô hình
-with open('models/id3_model.pkl', 'rb') as f:
-    id3_model = pickle.load(f)
-
-with open('models/knn_model.pkl', 'rb') as f:
-    knn_model = pickle.load(f)
-
-with open('models/rf_model.pkl', 'rb') as f:
-    rf_model = pickle.load(f)
+# Load pipeline và mô hình
+try:
+    with open('models/pipeline.pkl', 'rb') as f:
+        pipeline = pickle.load(f)
+    with open('models/id3_model.pkl', 'rb') as f:
+        id3_model = pickle.load(f)
+    with open('models/knn_model.pkl', 'rb') as f:
+        knn_model = pickle.load(f)
+    with open('models/rf_model.pkl', 'rb') as f:
+        rf_model = pickle.load(f)
+except FileNotFoundError:
+    st.error("Không tìm thấy tệp mô hình. Vui lòng kiểm tra đường dẫn.")
+    st.stop()  # Dừng ứng dụng nếu không tìm thấy mô hình
 
 # Tiền xử lý dữ liệu đầu vào
 def preprocess_input(data):
     df = pd.DataFrame([data])
     df['GENDER'] = df['GENDER'].map({'Nam': 0, 'Nữ': 1})
-    df['target'] = 0  # Giá trị mặc định, không dùng trong dự đoán
+    df['target'] = 0
 
     bins = [0, 30, 40, 50, 60, 70, 100]
     labels = ['<30', '30-40', '40-50', '50-60', '60-70', '>70']
@@ -37,116 +37,82 @@ st.set_page_config(page_title="Dự đoán ung thư phổi", page_icon=":lungs:"
 st.markdown("<h1 style='text-align: center; color: #1E90FF;'>ỨNG DỤNG DỰ ĐOÁN UNG THƯ PHỔI</h1>", unsafe_allow_html=True)
 
 # Sidebar
-st.sidebar.header("Nhập những dấu hiệu của bạn")
+st.sidebar.header("Nhập thông tin")
 
-# Initialize session state for form inputs if they don't exist
-if 'gender' not in st.session_state:
-    st.session_state.gender = 'Nam'
-if 'age' not in st.session_state:
-    st.session_state.age = 30
-if 'smoking' not in st.session_state:
-    st.session_state.smoking = 'Không'
-if 'yellow_fingers' not in st.session_state:
-    st.session_state.yellow_fingers = 'Không'
-if 'anxiety' not in st.session_state:
-    st.session_state.anxiety = 'Không'
-if 'peer_pressure' not in st.session_state:
-    st.session_state.peer_pressure = 'Không'
-if 'chronic_disease' not in st.session_state:
-    st.session_state.chronic_disease = 'Không'
-if 'fatigue' not in st.session_state:
-    st.session_state.fatigue = 'Không'
-if 'allergy' not in st.session_state:
-    st.session_state.allergy = 'Không'
-if 'wheezing' not in st.session_state:
-    st.session_state.wheezing = 'Không'
-if 'alcohol_consuming' not in st.session_state:
-    st.session_state.alcohol_consuming = 'Không'
-if 'coughing' not in st.session_state:
-    st.session_state.coughing = 'Không'
-if 'shortness_of_breath' not in st.session_state:
-    st.session_state.shortness_of_breath = 'Không'
-if 'swallowing_difficulty' not in st.session_state:
-    st.session_state.swallowing_difficulty = 'Không'
-if 'chest_pain' not in st.session_state:
-    st.session_state.chest_pain = 'Không'
-if 'model_name' not in st.session_state:
-    st.session_state.model_name = 'ID3'
+# Sử dụng form để nhóm các input và xử lý sự kiện submit
+with st.sidebar.form(key='input_form'):
+    gender = st.selectbox('Giới tính', ['Nam', 'Nữ'])
+    age = st.number_input('Tuổi', min_value=0, max_value=100, value=30)
+    smoking = st.selectbox('Hút thuốc', ['Không', 'Có'])
+    yellow_fingers = st.selectbox('Vàng ngón tay', ['Không', 'Có'])
+    anxiety = st.selectbox('Lo lắng', ['Không', 'Có'])
+    peer_pressure = st.selectbox('Áp lực từ bạn bè', ['Không', 'Có'])
+    chronic_disease = st.selectbox('Bệnh mãn tính', ['Không', 'Có'])
+    fatigue = st.selectbox('Mệt mỏi', ['Không', 'Có'])
+    allergy = st.selectbox('Dị ứng', ['Không', 'Có'])
+    wheezing = st.selectbox('Thở khò khè', ['Không', 'Có'])
+    alcohol_consuming = st.selectbox('Uống rượu bia', ['Không', 'Có'])
+    coughing = st.selectbox('Ho', ['Không', 'Có'])
+    shortness_of_breath = st.selectbox('Khó thở', ['Không', 'Có'])
+    swallowing_difficulty = st.selectbox('Khó nuốt', ['Không', 'Có'])
+    chest_pain = st.selectbox('Đau ngực', ['Không', 'Có'])
+    model_name = st.selectbox('Chọn mô hình', ['ID3', 'KNN', 'Random Forest'])
+    submit_button = st.form_submit_button(label='Dự đoán')
 
-gender = st.sidebar.selectbox('Giới tính', ['Nam', 'Nữ'], key='gender')
-age = st.sidebar.number_input('Tuổi', min_value=0, max_value=100, value=st.session_state.age, key='age')
-smoking = st.sidebar.selectbox('Hút thuốc', ['Không', 'Có'], key = 'smoking')
-yellow_fingers = st.sidebar.selectbox('Vàng ngón tay', ['Không', 'Có'], key='yellow_fingers')
-anxiety = st.sidebar.selectbox('Lo lắng', ['Không', 'Có'], key='anxiety')
-peer_pressure = st.sidebar.selectbox('Áp lực từ bạn bè', ['Không', 'Có'], key='peer_pressure')
-chronic_disease = st.sidebar.selectbox('Bệnh mãn tính', ['Không', 'Có'], key='chronic_disease')
-fatigue = st.sidebar.selectbox('Mệt mỏi', ['Không', 'Có'], key='fatigue')
-allergy = st.sidebar.selectbox('Dị ứng', ['Không', 'Có'], key='allergy')
-wheezing = st.sidebar.selectbox('Thở khò khè', ['Không', 'Có'], key='wheezing')
-alcohol_consuming = st.sidebar.selectbox('Uống rượu bia', ['Không', 'Có'], key='alcohol_consuming')
-coughing = st.sidebar.selectbox('Ho', ['Không', 'Có'], key='coughing')
-shortness_of_breath = st.sidebar.selectbox('Khó thở', ['Không', 'Có'], key='shortness_of_breath')
-swallowing_difficulty = st.sidebar.selectbox('Khó nuốt', ['Không', 'Có'], key='swallowing_difficulty')
-chest_pain = st.sidebar.selectbox('Đau ngực', ['Không', 'Có'], key='chest_pain')
+# Xử lý dự đoán khi form được submit
+if submit_button:
+    data = {
+        'GENDER': gender,
+        'AGE': age,
+        'SMOKING': 2 if smoking == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'YELLOW_FINGERS': 2 if yellow_fingers == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'ANXIETY': 2 if anxiety == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'PEER_PRESSURE': 2 if peer_pressure == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'CHRONIC DISEASE': 2 if chronic_disease == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'FATIGUE ': 2 if fatigue == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'ALLERGY ': 2 if allergy == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'WHEEZING': 2 if wheezing == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'ALCOHOL CONSUMING': 2 if alcohol_consuming == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'COUGHING': 2 if coughing == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'SHORTNESS OF BREATH': 2 if shortness_of_breath == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'SWALLOWING DIFFICULTY': 2 if swallowing_difficulty == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'CHEST PAIN': 2 if chest_pain == 'Có' else 1,  # Sửa thành 2 nếu 'Có', 1 nếu 'Không'
+        'target': 0
+    }
 
-model_name = st.sidebar.selectbox('Chọn mô hình', ['ID3', 'KNN', 'Random Forest'], key='model_name')
+    processed_data = preprocess_input(data)
 
-# Nút dự đoán
-if st.sidebar.button('Dự đoán'):
-    # Check if all fields are filled
-    if not gender or not age or not smoking or not yellow_fingers or not anxiety or not peer_pressure or not chronic_disease or not fatigue or not allergy or not wheezing or not alcohol_consuming or not coughing or not shortness_of_breath or not swallowing_difficulty or not chest_pain:
-        st.sidebar.warning("Vui lòng điền đầy đủ thông tin.")
+    if model_name == 'ID3':
+        model = id3_model
+        prediction = model.predict(processed_data)
+        try:
+            proba = model.predict_proba(processed_data)
+            probability = round(proba[0][prediction[0]] * 100, 2)
+            st.markdown(f"<h4 style='text-align: center;'>Xác suất: {probability}%</h4>", unsafe_allow_html=True)
+        except AttributeError:
+            st.markdown("<h4 style='text-align: center;'>Mô hình này không có xác suất</h4>", unsafe_allow_html=True)
+    elif model_name == 'KNN':
+        model = knn_model
+        prediction = model.predict(processed_data[:, 8:]) # Chỉ sử dụng các đặc trưng triệu chứng
+        try:
+            proba = model.predict_proba(processed_data[:, 8:])
+            probability = round(proba[0][prediction[0]] * 100, 2)
+            st.markdown(f"<h4 style='text-align: center;'>Xác suất: {probability}%</h4>", unsafe_allow_html=True)
+        except AttributeError:
+            st.markdown("<h4 style='text-align: center;'>Mô hình này không có xác suất</h4>", unsafe_allow_html=True)
     else:
-        data = {
-            'GENDER': gender,
-            'AGE': age,
-            'SMOKING': 1 if smoking == 'Có' else 0,
-            'YELLOW_FINGERS': 1 if yellow_fingers == 'Có' else 0,
-            'ANXIETY': 1 if anxiety == 'Có' else 0,
-            'PEER_PRESSURE': 1 if peer_pressure == 'Có' else 0,
-            'CHRONIC DISEASE': 1 if chronic_disease == 'Có' else 0,
-            'FATIGUE ': 1 if fatigue == 'Có' else 0,
-            'ALLERGY ': 1 if allergy == 'Có' else 0,
-            'WHEEZING': 1 if wheezing == 'Có' else 0,
-            'ALCOHOL CONSUMING': 1 if alcohol_consuming == 'Có' else 0,
-            'COUGHING': 1 if coughing == 'Có' else 0,
-            'SHORTNESS OF BREATH': 1 if shortness_of_breath == 'Có' else 0,
-            'SWALLOWING DIFFICULTY': 1 if swallowing_difficulty == 'Có' else 0,
-            'CHEST PAIN': 1 if chest_pain == 'Có' else 0,
-            'target': 0
-        }
-        
-        processed_data = preprocess_input(data)
-
-        if model_name == 'ID3':
-            prediction = id3_model.predict(processed_data)
-            try:
-                proba = id3_model.predict_proba(processed_data)
-                probability = round(proba[0][prediction[0]] * 100, 2)
-                st.markdown(f"<h4 style='text-align: center;'>Xác suất: {probability}%</h4>", unsafe_allow_html=True)
-            except AttributeError:
-                st.markdown("<h4 style='text-align: center;'>Mô hình này không có xác suất</h4>", unsafe_allow_html=True)
-        elif model_name == 'KNN':
-            prediction = knn_model.predict(processed_data)
-            try:
-                proba = knn_model.predict_proba(processed_data)
-                probability = round(proba[0][prediction[0]] * 100, 2)
-                st.markdown(f"<h4 style='text-align: center;'>Xác suất: {probability}%</h4>", unsafe_allow_html=True)
-            except AttributeError:
-                st.markdown("<h4 style='text-align: center;'>Mô hình này không có xác suất</h4>", unsafe_allow_html=True)
-        else:
-            prediction = rf_model.predict(processed_data)
-            try:
-                proba = rf_model.predict_proba(processed_data)
-                probability = round(proba[0][prediction[0]] * 100, 2)
-                st.markdown(f"<h4 style='text-align: center;'>Xác suất: {probability}%</h4>", unsafe_allow_html=True)
-            except AttributeError:
-                st.markdown("<h4 style='text-align: center;'>Mô hình này không có xác suất</h4>", unsafe_allow_html=True)
-
-        # Hiển thị kết quả
-        st.markdown("<h2 style='text-align: center; color: green;'>Kết quả dự đoán</h2>", unsafe_allow_html=True)
-        if prediction[0] == 1:
-            st.markdown(f"<h3 style='text-align: center;'>Mô hình <span style='color: red;'>{model_name}</span> dự đoán nguy cơ ung thư phổi <span style='color: red;'>cao</span>.</h3>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<h3 style='text-align: center;'>Mô hình <span style='color: green;'>{model_name}</span> dự đoán nguy cơ ung thư phổi <span style='color: green;'>thấp</span>.</h3>", unsafe_allow_html=True)
+        model = rf_model
+        prediction = model.predict(processed_data)
+        try:
+            proba = model.predict_proba(processed_data)
+            probability = round(proba[0][prediction[0]] * 100, 2)
+            st.markdown(f"<h4 style='text-align: center;'>Xác suất: {probability}%</h4>", unsafe_allow_html=True)
+        except AttributeError:
+            st.markdown("<h4 style='text-align: center;'>Mô hình này không có xác suất</h4>", unsafe_allow_html=True)
+    
+    st.markdown("<h2 style='text-align: center; color: green;'>Kết quả dự đoán</h2>", unsafe_allow_html=True)
+    if prediction[0] == 1:
+        st.markdown(f"<h3 style='text-align: center;'>Mô hình <span style='color: red;'>{model_name}</span> dự đoán nguy cơ ung thư phổi <span style='color: red;'>cao</span>.</h3>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<h3 style='text-align: center;'>Mô hình <span style='color: green;'>{model_name}</span> dự đoán nguy cơ ung thư phổi <span style='color: green;'>thấp</span>.</h3>", unsafe_allow_html=True)
 
