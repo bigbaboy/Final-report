@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeClassifier
@@ -37,15 +37,15 @@ df.drop('AGE', axis=1, inplace=True)
 X = df.drop('target', axis=1)
 y = df['target']
 
-# One-hot Encoding và StandardScaler
+# One-hot Encoding và MinMaxScaler
 ct = ColumnTransformer(
     transformers=[
         ('ohe', OneHotEncoder(handle_unknown='ignore'), ['GENDER', 'AGE_GROUP']),
-        ('scaler', StandardScaler(), ['SMOKING', 'YELLOW_FINGERS', 'ANXIETY',
-                                     'PEER_PRESSURE', 'CHRONIC DISEASE', 'FATIGUE ',
-                                     'ALLERGY ', 'WHEEZING', 'ALCOHOL CONSUMING',
-                                     'COUGHING', 'SHORTNESS OF BREATH',
-                                     'SWALLOWING DIFFICULTY', 'CHEST PAIN'])
+        ('scaler', MinMaxScaler(), ['SMOKING', 'YELLOW_FINGERS', 'ANXIETY',
+                                       'PEER_PRESSURE', 'CHRONIC DISEASE', 'FATIGUE ',
+                                       'ALLERGY ', 'WHEEZING', 'ALCOHOL CONSUMING',
+                                       'COUGHING', 'SHORTNESS OF BREATH',
+                                       'SWALLOWING DIFFICULTY', 'CHEST PAIN'])
     ],
     remainder='passthrough'
 )
@@ -54,27 +54,46 @@ ct = ColumnTransformer(
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
 
 # Tạo pipeline
-pipeline = Pipeline([('transformer', ct), ('scaler', StandardScaler())])
-X_train_scaled = pipeline.fit_transform(X_train)
-X_test_scaled = pipeline.transform(X_test)
+pipeline = Pipeline([('transformer', ct)])
+X_train_transformed = pipeline.fit_transform(X_train)
+X_test_transformed = pipeline.transform(X_test)
 
 # ID3 (sử dụng DecisionTreeClassifier với criterion='entropy')
 id3_model = DecisionTreeClassifier(criterion='entropy', random_state=42)
-id3_model.fit(X_train_scaled, y_train)
-y_pred_id3 = id3_model.predict(X_test_scaled)
+id3_model.fit(X_train_transformed, y_train)
+y_pred_id3 = id3_model.predict(X_test_transformed)
 print("ID3 Accuracy:", accuracy_score(y_test, y_pred_id3))
 
-# KNN
-knn_model = KNeighborsClassifier(n_neighbors=5)
-knn_model.fit(X_train_scaled, y_train)
-y_pred_knn = knn_model.predict(X_test_scaled)
+# KNN - Chỉ sử dụng các đặc trưng triệu chứng
+# Lấy các cột từ cột thứ 8 (SMOKING)
+X_train_knn = X_train_transformed[:, 8:]
+X_test_knn = X_test_transformed[:, 8:]
+knn_model = KNeighborsClassifier(n_neighbors=7)
+knn_model.fit(X_train_knn, y_train)
+y_pred_knn = knn_model.predict(X_test_knn)
 print("KNN Accuracy:", accuracy_score(y_test, y_pred_knn))
 
 # Random Forest
 rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-rf_model.fit(X_train_scaled, y_train)
-y_pred_rf = rf_model.predict(X_test_scaled)
+rf_model.fit(X_train_transformed, y_train)
+y_pred_rf = rf_model.predict(X_test_transformed)
 print("Random Forest Accuracy:", accuracy_score(y_test, y_pred_rf))
+
+# In ra 5 dòng đầu tiên của X_train_transformed để kiểm tra
+print("X_train_transformed (5 dòng đầu):")
+print(pd.DataFrame(X_train_transformed).head())
+
+# In ra 5 dòng đầu tiên của X_test_transformed để kiểm tra
+print("X_test_transformed (5 dòng đầu):")
+print(pd.DataFrame(X_test_transformed).head())
+
+# In ra 5 dòng đầu tiên của X_train_knn để kiểm tra
+print("X_train_knn (5 dòng đầu):")
+print(pd.DataFrame(X_train_knn).head())
+
+# In ra 5 dòng đầu tiên của X_test_knn để kiểm tra
+print("X_test_knn (5 dòng đầu):")
+print(pd.DataFrame(X_test_knn).head())
 
 # Lưu mô hình
 with open('models/id3_model.pkl', 'wb') as f:
