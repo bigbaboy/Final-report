@@ -115,3 +115,4 @@ if submit_button:
         st.markdown(f"<h3 style='text-align: center;'>Mô hình <span style='color: red;'>{model_name}</span> dự đoán nguy cơ ung thư phổi <span style='color: red;'>cao</span>.</h3>", unsafe_allow_html=True)
     else:
         st.markdown(f"<h3 style='text-align: center;'>Mô hình <span style='color: green;'>{model_name}</span> dự đoán nguy cơ ung thư phổi <span style='color: green;'>thấp</span>.</h3>", unsafe_allow_html=True)
+
