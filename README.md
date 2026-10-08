@@ -40,13 +40,13 @@ python -m venv .venv
 Activate the environment, then:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install streamlit pandas numpy scikit-learn
 python -m streamlit run app.py
 ```
 
 The `requirements.txt` file in this snapshot is empty. Install compatible versions of Streamlit, pandas, NumPy and scikit-learn before running; the original training environment has not been recorded.
 
-The repository includes saved model artifacts. Pickle loading requires trusted files and compatible library versions; the unpinned requirements do not establish an exact training environment. The artifacts were not executed during this documentation update.
+The repository includes saved model artifacts. Pickle loading requires trusted files and compatible library versions; the empty requirements file does not establish an exact training environment. The artifacts were not executed during this documentation update.
 
 ## Retraining prerequisites
 
